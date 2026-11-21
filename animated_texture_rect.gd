@@ -38,7 +38,10 @@ enum StretchMode {
 			return animation
 		return &"default"
 	set(val):
-		if animation == val: return
+		if animation == val or sprite_frames == null: return
+		
+		if !sprite_frames.has_animation(val):
+			printerr("Animation %s doesn't exist." % [val])
 		
 		animation = val
 		animation_changed.emit()
@@ -50,7 +53,7 @@ enum StretchMode {
 @export var frame: int = 0:
 	get():
 		var _frame: int = frame
-		if sprite_frames != null:
+		if sprite_frames != null and sprite_frames.has_animation(animation):
 			_frame = clampi(_frame, 0, sprite_frames.get_frame_count(animation) - 1)
 		
 		return _frame
@@ -58,7 +61,7 @@ enum StretchMode {
 		if val == frame: return
 		
 		var _frame: int = val
-		if sprite_frames != null:
+		if sprite_frames != null and sprite_frames.has_animation(animation):
 			var frame_count: int = sprite_frames.get_frame_count(animation)
 			_frame = clampi(val, 0, frame_count - 1)
 		
@@ -132,7 +135,7 @@ func _sprite_frames_changed() -> void:
 		frame = frame
 
 func _draw() -> void:
-	if sprite_frames == null:
+	if sprite_frames == null or !sprite_frames.has_animation(animation):
 		return
 	
 	var frame: Texture2D = sprite_frames.get_frame_texture(animation, frame)
@@ -146,28 +149,27 @@ func _draw() -> void:
 	draw_texture_rect(frame, rect, tile)
 
 func _get_minimum_size() -> Vector2:
-	if sprite_frames == null:
+	if sprite_frames == null or !sprite_frames.has_animation(animation):
 		return _minimum_size_cache
 	
 	var min_size: Vector2 = Vector2.ZERO
+	var frame_size: Vector2 = sprite_frames.get_frame_texture(animation, frame).get_size()
 	
 	match rect_expand_mode:
 		ExpandMode.KEEP_SIZE:
-			min_size = sprite_frames.get_frame_texture(animation, frame).get_size()
+			min_size = frame_size
 		
 		ExpandMode.FIT_WIDTH:
-			min_size.x = sprite_frames.get_frame_texture(animation, frame).get_size().x
+			min_size.x = frame_size.x
 		
 		ExpandMode.FIT_WIDTH_PROPORTIONAL:
-			var frame_size: Vector2 = sprite_frames.get_frame_texture(animation, frame).get_size()
 			var ratio: float = frame_size.x / frame_size.y
 			min_size.x = size.y * ratio
 		
 		ExpandMode.FIT_HEIGHT:
-			min_size.y = sprite_frames.get_frame_texture(animation, frame).get_size().y
+			min_size.y = frame_size.y
 		
 		ExpandMode.FIT_HEIGHT_PROPORTIONAL:
-			var frame_size: Vector2 = sprite_frames.get_frame_texture(animation, frame).get_size()
 			var ratio: float = frame_size.y / frame_size.x
 			min_size.x = size.x * ratio
 	
