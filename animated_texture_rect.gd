@@ -25,28 +25,38 @@ enum StretchMode {
 @export_group("Rect", "rect_")
 @export var rect_expand_mode: ExpandMode = ExpandMode.KEEP_SIZE:
 	set(val):
+		if rect_expand_mode == val: return
+		
 		rect_expand_mode = val
 		queue_redraw()
 		update_minimum_size()
 
 @export var rect_stretch_mode: StretchMode = StretchMode.SCALE:
 	set(val):
+		if rect_stretch_mode == val: return
+		
 		rect_stretch_mode = val
 		queue_redraw()
 
 @export var rect_flip_h: bool = false:
 	set(val):
+		if rect_flip_h == val: return
+		
 		rect_flip_h = val
 		queue_redraw()
 
 @export var rect_flip_v: bool = false:
 	set(val):
+		if rect_flip_v == val: return
+		
 		rect_flip_v = val
 		queue_redraw()
 
 ## The [member SpriteFrames] resource containing the animation(s). Allows you the option to load, edit, clear, make unique and save the states of the [member SpriteFrames] resource.
 @export var sprite_frames: SpriteFrames:
 	set(val):
+		if sprite_frames == val: return
+		
 		sprite_frames = val
 		sprite_frames_changed.emit()
 		_sprite_frames_changed()
@@ -58,6 +68,8 @@ enum StretchMode {
 			return animation
 		return &"default"
 	set(val):
+		if animation == val: return
+		
 		animation = val
 		animation_changed.emit()
 		notify_property_list_changed()
@@ -71,8 +83,7 @@ enum StretchMode {
 		
 		return _frame
 	set(val):
-		if val == frame:
-			return
+		if val == frame: return
 		
 		var _frame = val
 		if sprite_frames != null:
@@ -83,7 +94,11 @@ enum StretchMode {
 		frame_changed.emit()
 
 @export_storage var speed_scale: float = 1.0
-@export_storage var offset: Vector2 = Vector2.ZERO
+@export_storage var offset: Vector2 = Vector2.ZERO:
+	set(val):
+		if offset == val: return
+		offset = val
+		queue_redraw()
 
 @export_storage var _minimum_size_cache: Vector2 = Vector2.ZERO
 
@@ -107,10 +122,14 @@ func _sprite_frames_changed() -> void:
 		animation = sprite_frames.get_animation_names()[0]
 
 func _draw() -> void:
+	if sprite_frames == null:
+		return
+	
 	var frame: Texture2D = sprite_frames.get_frame_texture(animation, frame)
 	var rect: Rect2 = get_rect_from_stretch_mode(frame.get_size())
 	var tile: bool = rect_stretch_mode == StretchMode.TILE
 	
+	rect.position += offset
 	draw_texture_rect(frame, rect, tile)
 
 func _get_minimum_size() -> Vector2:
