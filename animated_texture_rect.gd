@@ -56,9 +56,10 @@ enum StretchMode {
 	set(val):
 		if val == frame: return
 		
-		var _frame = val
+		var _frame: int = val
 		if sprite_frames != null:
-			_frame = clampi(val, 0, sprite_frames.get_frame_count(animation) - 1)
+			var frame_count: int = sprite_frames.get_frame_count(animation)
+			_frame = clampi(val, 0, frame_count - 1)
 		
 		frame = _frame
 		queue_redraw()
@@ -81,6 +82,7 @@ enum StretchMode {
 		rect_expand_mode = val
 		queue_redraw()
 		update_minimum_size()
+		update_configuration_warnings()
 
 @export var rect_stretch_mode: StretchMode = StretchMode.SCALE:
 	set(val):
@@ -88,6 +90,7 @@ enum StretchMode {
 		
 		rect_stretch_mode = val
 		queue_redraw()
+		update_configuration_warnings()
 
 @export var rect_flip_h: bool = false:
 	set(val):
@@ -124,12 +127,16 @@ signal sprite_frames_changed
 func _sprite_frames_changed() -> void:
 	if sprite_frames != null and !sprite_frames.has_animation(animation):
 		animation = sprite_frames.get_animation_names()[0]
+		frame = frame
 
 func _draw() -> void:
 	if sprite_frames == null:
 		return
 	
 	var frame: Texture2D = sprite_frames.get_frame_texture(animation, frame)
+	if frame == null:
+		return
+	
 	var rect: Rect2 = get_rect_from_stretch_mode(frame.get_size())
 	var tile: bool = rect_stretch_mode == StretchMode.TILE
 	
@@ -158,8 +165,9 @@ func _get_minimum_size() -> Vector2:
 			min_size.y = sprite_frames.get_frame_texture(animation, frame).get_size().y
 		
 		ExpandMode.FIT_HEIGHT_PROPORTIONAL:
-			#unimplemented yet, this is just FIT_HEIGHT
-			min_size.y = sprite_frames.get_frame_texture(animation, frame).get_size().y
+			var frame_size: Vector2 = sprite_frames.get_frame_texture(animation, frame).get_size()
+			var ratio: float = frame_size.y / frame_size.x
+			min_size.x = size.x * ratio
 	
 	_minimum_size_cache = min_size
 	return min_size
@@ -182,14 +190,26 @@ func get_rect_from_stretch_mode(frame_size: Vector2) -> Rect2:
 			rect.position = (get_rect().size / 2) - (frame_size / 2)
 			rect.size = frame_size
 		
-		StretchMode.KEEP_ASPECT:
-			pass
-		
-		StretchMode.KEEP_ASPECT_CENTERED:
-			pass
+		StretchMode.KEEP_ASPECT, StretchMode.KEEP_ASPECT_CENTERED:
+			var tex_width: float = frame_size.x * size.y / frame_size.y
+			var tex_height = size.y
+			
+			if tex_width > size.x:
+				tex_width = size.x
+				tex_height = frame_size.y * tex_width / frame_size.x
+			
+			if rect_stretch_mode == StretchMode.KEEP_ASPECT_CENTERED:
+				rect.position.x = (size.x - tex_width) / 2
+				rect.position.y = (size.y - tex_height) / 2
+			
+			size.x = tex_width
+			size.y = tex_height
 		
 		StretchMode.KEEP_ASPECT_COVERED:
 			pass
+	
+	rect.size.x *= 1 if !rect_flip_h else -1
+	rect.size.y *= 1 if !rect_flip_v else -1
 	
 	return rect
 
@@ -197,3 +217,15 @@ func _validate_property(property: Dictionary) -> void:
 	if property.name == &"animation":
 		property.hint = PROPERTY_HINT_ENUM
 		property.hint_string = ",".join(_animation_list)
+
+func _get_configuration_warnings() -> PackedStringArray:
+	var warnings: PackedStringArray = []
+	
+	if rect_expand_mode == ExpandMode.FIT_WIDTH_PROPORTIONAL:
+		warnings.append("Expand mode is set to FIT_WIDTH_PROPORTIONAL, which is experimental and does not function as expected.")
+	if rect_expand_mode == ExpandMode.FIT_HEIGHT_PROPORTIONAL:
+		warnings.append("Expand mode is set to FIT_HEIGHT_PROPORTIONAL, which is experimental and does not function as expected.")
+	if rect_stretch_mode == StretchMode.KEEP_ASPECT_COVERED:
+		warnings.append("Stretch mode is set to KEEP_ASPECT_COVERED, which is experimental and does not function as expected.")
+	
+	return warnings
