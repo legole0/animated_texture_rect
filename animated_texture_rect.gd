@@ -43,6 +43,7 @@ enum StretchMode {
 		animation = val
 		animation_changed.emit()
 		queue_redraw()
+		update_minimum_size()
 		notify_property_list_changed()
 
 ## The displayed animation frame's index.
@@ -63,6 +64,7 @@ enum StretchMode {
 		
 		frame = _frame
 		queue_redraw()
+		update_minimum_size()
 		frame_changed.emit()
 
 @export var speed_scale: float = 1.0
@@ -225,6 +227,8 @@ func _get_configuration_warnings() -> PackedStringArray:
 		warnings.append("Expand mode is set to FIT_WIDTH_PROPORTIONAL, which is experimental and does not function as expected.")
 	if rect_expand_mode == ExpandMode.FIT_HEIGHT_PROPORTIONAL:
 		warnings.append("Expand mode is set to FIT_HEIGHT_PROPORTIONAL, which is experimental and does not function as expected.")
+	if rect_stretch_mode == StretchMode.TILE:
+		warnings.append("Stretch mode is set to TILE, which is experimental and does not function as expected.")
 	if rect_stretch_mode == StretchMode.KEEP_ASPECT_COVERED:
 		warnings.append("Stretch mode is set to KEEP_ASPECT_COVERED, which is experimental and does not function as expected.")
 	
